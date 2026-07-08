@@ -2,12 +2,13 @@ package com.codecraft.subvault.di
 
 import android.content.Context
 import androidx.room.Room
+import com.codecraft.subvault.data.local.ExchangeRateDao
 import com.codecraft.subvault.data.local.PriceChangeDao
 import com.codecraft.subvault.data.local.SubVaultDatabase
 import com.codecraft.subvault.data.local.SubscriptionDao
 import com.codecraft.subvault.data.local.UserPreferencesDao
 import com.codecraft.subvault.domain.util.CurrencyConverter
-import com.codecraft.subvault.domain.util.FixedCurrencyConverter
+import com.codecraft.subvault.domain.util.DynamicCurrencyConverter
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -27,7 +28,7 @@ object AppModule {
             SubVaultDatabase::class.java,
             "subvault_db"
         )
-        .addMigrations(SubVaultDatabase.MIGRATION_2_3, SubVaultDatabase.MIGRATION_3_4)
+        .addMigrations(SubVaultDatabase.MIGRATION_2_3, SubVaultDatabase.MIGRATION_3_4, SubVaultDatabase.MIGRATION_4_5)
         .build()
     }
 
@@ -51,7 +52,13 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideCurrencyConverter(): CurrencyConverter {
-        return FixedCurrencyConverter()
+    fun provideExchangeRateDao(database: SubVaultDatabase): ExchangeRateDao {
+        return database.exchangeRateDao
+    }
+
+    @Provides
+    @Singleton
+    fun provideCurrencyConverter(dynamicCurrencyConverter: DynamicCurrencyConverter): CurrencyConverter {
+        return dynamicCurrencyConverter
     }
 }
