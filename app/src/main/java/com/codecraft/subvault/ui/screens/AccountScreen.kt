@@ -12,13 +12,23 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.codecraft.subvault.ui.theme.SubVaultTheme
 
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.codecraft.subvault.ui.theme.SubVaultTheme
+import com.codecraft.subvault.ui.viewmodel.DashboardViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
 @Composable
-fun AccountScreen() {
-    AccountContent()
+fun AccountScreen(viewModel: DashboardViewModel = hiltViewModel()) {
+    val dashboardSummary by viewModel.dashboardSummary.collectAsState()
+    AccountContent(lastUpdated = dashboardSummary?.lastRatesUpdate)
 }
 
 @Composable
-fun AccountContent() {
+fun AccountContent(lastUpdated: Long? = null) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -60,6 +70,20 @@ fun AccountContent() {
             
             Spacer(modifier = Modifier.height(32.dp))
             
+            // Currency Update Status
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Currency Rates", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    val dateStr = lastUpdated?.let {
+                        SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()).format(Date(it))
+                    } ?: "Never"
+                    Text("Last Updated: $dateStr", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+
             // Future placeholder for login/sync/profile details
             Card(
                 modifier = Modifier.fillMaxWidth()
