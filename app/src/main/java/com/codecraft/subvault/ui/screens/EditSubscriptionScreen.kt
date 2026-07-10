@@ -10,8 +10,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -72,6 +74,8 @@ fun EditSubscriptionContent(
     var endDate by remember { mutableStateOf<Long?>(subscription.endDate) }
     var hasEndDate by remember { mutableStateOf(subscription.endDate != null) }
     var paymentMethod by remember { mutableStateOf(subscription.paymentMethod) }
+    
+    val accentColor = MaterialTheme.colorScheme.primary
 
     ConfirmationDialog(
         show = showWarningDialog,
@@ -194,17 +198,18 @@ fun EditSubscriptionContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 if (pagerState.currentPage > 0) {
                     TextButton(onClick = {
                         scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
                     }) {
-                        Text("Back")
+                        Text("Back", color = accentColor, fontWeight = FontWeight.Bold)
                     }
                 } else {
                     TextButton(onClick = onNavigateBack) {
-                        Text("Cancel")
+                        Text("Cancel", color = accentColor, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -238,13 +243,18 @@ fun EditSubscriptionContent(
                         else -> true
                     },
                     shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = accentColor),
                     contentPadding = if (pagerState.currentPage == 3) PaddingValues(horizontal = 24.dp, vertical = 12.dp) else ButtonDefaults.ContentPadding
                 ) {
                     if (pagerState.currentPage == 3) {
                         Icon(Icons.Default.Check, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
+                        Text("Update & Save", fontWeight = FontWeight.Bold)
+                    } else {
+                        Text("Next", fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(Icons.Default.ChevronRight, contentDescription = null)
                     }
-                    Text(if (pagerState.currentPage == 3) "Update & Save" else "Next")
                 }
             }
         }

@@ -117,7 +117,7 @@ fun Step1Identity(name: String, category: String, onNameChange: (String) -> Unit
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val headerCardBg = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF8F9FE)
     val iconSurfaceBg = if (isDark) MaterialTheme.colorScheme.primaryContainer else Color(0xFFE8EAF6)
-    val accentColor = if (isDark) MaterialTheme.colorScheme.primary else Color(0xFF3F51B5)
+    val accentColor = MaterialTheme.colorScheme.primary
     val subTextColor = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
     val infoCardBg = if (isDark) MaterialTheme.colorScheme.secondaryContainer else Color(0xFFF0F4FF)
 
@@ -291,7 +291,7 @@ fun CategoryCard(item: CategoryItem, isSelected: Boolean, onClick: () -> Unit, m
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val selectedBg = if (isDark) MaterialTheme.colorScheme.primaryContainer else Color(0xFFF0F4FF)
     val unselectedBg = if (isDark) MaterialTheme.colorScheme.surface else Color.White
-    val accentColor = if (isDark) MaterialTheme.colorScheme.primary else Color(0xFF3F51B5)
+    val accentColor = MaterialTheme.colorScheme.primary
     val unselectedBorder = if (isDark) MaterialTheme.colorScheme.outlineVariant else Color(0xFFF5F5F5)
 
     OutlinedCard(
@@ -344,7 +344,7 @@ fun Step2Pricing(
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val headerCardBg = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF8F9FE)
     val iconSurfaceBg = if (isDark) MaterialTheme.colorScheme.primaryContainer else Color(0xFFE8EAF6)
-    val accentColor = if (isDark) MaterialTheme.colorScheme.primary else Color(0xFF3F51B5)
+    val accentColor = MaterialTheme.colorScheme.primary
     val subTextColor = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
     val infoCardBg = if (isDark) MaterialTheme.colorScheme.secondaryContainer else Color(0xFFF0F4FF)
     
@@ -471,9 +471,9 @@ fun Step2Pricing(
         )
 
         val cycles = listOf(
-            BillingCycleItem("Weekly", "Every 7 days", Icons.Default.CalendarToday),
-            BillingCycleItem("Monthly", "Every month", Icons.Default.CalendarMonth),
-            BillingCycleItem("Yearly", "Every year", Icons.Default.Event)
+            BillingCycleItem("Weekly", "Every 7 days", Icons.Default.CalendarToday, Color(0xFF4CAF50)),
+            BillingCycleItem("Monthly", "Every month", Icons.Default.CalendarMonth, Color(0xFFFF9800)),
+            BillingCycleItem("Yearly", "Every year", Icons.Default.Event, Color(0xFFE91E63))
         )
 
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -490,7 +490,7 @@ fun Step2Pricing(
             }
             // Second Row: Lifetime item
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                val lifetime = BillingCycleItem("Lifetime", "One-time payment", Icons.Default.AllInclusive)
+                val lifetime = BillingCycleItem("Lifetime", "One-time payment", Icons.Default.AllInclusive, Color(0xFF00BCD4))
                 BillingCycleCard(
                     item = lifetime,
                     isSelected = cycle == lifetime.name,
@@ -545,14 +545,14 @@ fun Step2Pricing(
     }
 }
 
-data class BillingCycleItem(val name: String, val subtext: String, val icon: ImageVector)
+data class BillingCycleItem(val name: String, val subtext: String, val icon: ImageVector, val color: Color)
 
 @Composable
 fun BillingCycleCard(item: BillingCycleItem, isSelected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val selectedBg = if (isDark) MaterialTheme.colorScheme.primaryContainer else Color(0xFFF0F4FF)
     val unselectedBg = if (isDark) MaterialTheme.colorScheme.surface else Color.White
-    val accentColor = if (isDark) MaterialTheme.colorScheme.primary else Color(0xFF3F51B5)
+    val accentColor = MaterialTheme.colorScheme.primary
     val unselectedBorder = if (isDark) MaterialTheme.colorScheme.outlineVariant else Color(0xFFF5F5F5)
 
     OutlinedCard(
@@ -576,7 +576,7 @@ fun BillingCycleCard(item: BillingCycleItem, isSelected: Boolean, onClick: () ->
             Icon(
                 item.icon,
                 contentDescription = null,
-                tint = if (isSelected) accentColor else if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray,
+                tint = if (isSelected) accentColor else item.color,
                 modifier = Modifier.size(28.dp)
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -612,7 +612,7 @@ fun Step3Details(
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val headerCardBg = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF8F9FE)
     val iconSurfaceBg = if (isDark) MaterialTheme.colorScheme.primaryContainer else Color(0xFFE8EAF6)
-    val accentColor = if (isDark) MaterialTheme.colorScheme.primary else Color(0xFF3F51B5)
+    val accentColor = MaterialTheme.colorScheme.primary
     val subTextColor = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
     val infoCardBg = if (isDark) MaterialTheme.colorScheme.secondaryContainer else Color(0xFFF0F4FF)
 
@@ -959,7 +959,7 @@ fun Step4Review(
                         Column {
                             Text(name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                             Surface(
-                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                                 shape = CircleShape
                             ) {
                                 Row(
@@ -968,7 +968,7 @@ fun Step4Review(
                                 ) {
                                     Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Text(category, style = MaterialTheme.typography.labelSmall)
+                                    Text(category, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                                 }
                             }
                         }
@@ -1052,7 +1052,7 @@ fun ReviewRow(icon: ImageVector, label: String, value: String, subValue: String?
             shape = RoundedCornerShape(8.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = if (isDark) MaterialTheme.colorScheme.primary else Color(0xFF3F51B5))
+                Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
             }
         }
         Spacer(modifier = Modifier.width(16.dp))
@@ -1072,7 +1072,7 @@ fun CurrencyDropdown(selectedCurrency: String, onCurrencyChange: (String) -> Uni
     val commonCurrencies = listOf("USD", "EUR", "GBP", "JPY", "INR", "CAD", "AUD", "BRL")
     var expanded by remember { mutableStateOf(false) }
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val accentColor = if (isDark) MaterialTheme.colorScheme.primary else Color(0xFF3F51B5)
+    val accentColor = MaterialTheme.colorScheme.primary
     val borderColor = if (isDark) MaterialTheme.colorScheme.outline else Color(0xFFE0E0E0)
 
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }, modifier = modifier) {

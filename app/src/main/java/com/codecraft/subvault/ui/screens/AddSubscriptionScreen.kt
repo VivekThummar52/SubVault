@@ -1,6 +1,5 @@
 package com.codecraft.subvault.ui.screens
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -15,7 +14,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -90,8 +88,7 @@ fun AddSubscriptionContent(
     val scope = rememberCoroutineScope()
     var showWarningDialog by remember { mutableStateOf(false) }
     
-    val isDark = isSystemInDarkTheme()
-    val accentColor = if (isDark) MaterialTheme.colorScheme.primary else Color(0xFF3F51B5)
+    val accentColor = MaterialTheme.colorScheme.primary
 
     ConfirmationDialog(
         show = showWarningDialog,
