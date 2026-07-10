@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -21,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -114,12 +114,12 @@ fun StepIndicator(
 
 @Composable
 fun Step1Identity(name: String, category: String, onNameChange: (String) -> Unit, onCategoryChange: (String) -> Unit) {
-    val isDark = isSystemInDarkTheme()
-    val headerCardBg = if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f) else Color(0xFFF8F9FE)
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val headerCardBg = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF8F9FE)
     val iconSurfaceBg = if (isDark) MaterialTheme.colorScheme.primaryContainer else Color(0xFFE8EAF6)
     val accentColor = if (isDark) MaterialTheme.colorScheme.primary else Color(0xFF3F51B5)
     val subTextColor = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
-    val infoCardBg = if (isDark) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f) else Color(0xFFF0F4FF)
+    val infoCardBg = if (isDark) MaterialTheme.colorScheme.secondaryContainer else Color(0xFFF0F4FF)
 
     Column(
         modifier = Modifier
@@ -288,25 +288,24 @@ data class CategoryItem(val name: String, val icon: ImageVector, val color: Colo
 
 @Composable
 fun CategoryCard(item: CategoryItem, isSelected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val isDark = isSystemInDarkTheme()
-    val selectedBg = if (isDark) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f) else Color(0xFFF0F4FF)
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val selectedBg = if (isDark) MaterialTheme.colorScheme.primaryContainer else Color(0xFFF0F4FF)
     val unselectedBg = if (isDark) MaterialTheme.colorScheme.surface else Color.White
     val accentColor = if (isDark) MaterialTheme.colorScheme.primary else Color(0xFF3F51B5)
     val unselectedBorder = if (isDark) MaterialTheme.colorScheme.outlineVariant else Color(0xFFF5F5F5)
 
-    Card(
+    OutlinedCard(
         modifier = modifier
             .height(100.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { onClick() },
-        colors = CardDefaults.cardColors(
+        colors = CardDefaults.outlinedCardColors(
             containerColor = if (isSelected) selectedBg else unselectedBg
         ),
         border = if (isSelected) BorderStroke(1.dp, accentColor) else BorderStroke(1.dp, unselectedBorder),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 0.dp else 1.dp)
+        shape = RoundedCornerShape(16.dp)
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -342,12 +341,12 @@ fun Step2Pricing(
     onCycleChange: (String) -> Unit
 ) {
     val symbol = CurrencyUtils.getSymbol(currency)
-    val isDark = isSystemInDarkTheme()
-    val headerCardBg = if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f) else Color(0xFFF8F9FE)
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val headerCardBg = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF8F9FE)
     val iconSurfaceBg = if (isDark) MaterialTheme.colorScheme.primaryContainer else Color(0xFFE8EAF6)
     val accentColor = if (isDark) MaterialTheme.colorScheme.primary else Color(0xFF3F51B5)
     val subTextColor = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
-    val infoCardBg = if (isDark) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f) else Color(0xFFF0F4FF)
+    val infoCardBg = if (isDark) MaterialTheme.colorScheme.secondaryContainer else Color(0xFFF0F4FF)
     
     Column(
         modifier = Modifier
@@ -550,25 +549,24 @@ data class BillingCycleItem(val name: String, val subtext: String, val icon: Ima
 
 @Composable
 fun BillingCycleCard(item: BillingCycleItem, isSelected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val isDark = isSystemInDarkTheme()
-    val selectedBg = if (isDark) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f) else Color(0xFFF0F4FF)
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val selectedBg = if (isDark) MaterialTheme.colorScheme.primaryContainer else Color(0xFFF0F4FF)
     val unselectedBg = if (isDark) MaterialTheme.colorScheme.surface else Color.White
     val accentColor = if (isDark) MaterialTheme.colorScheme.primary else Color(0xFF3F51B5)
     val unselectedBorder = if (isDark) MaterialTheme.colorScheme.outlineVariant else Color(0xFFF5F5F5)
 
-    Card(
+    OutlinedCard(
         modifier = modifier
             .height(110.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { onClick() },
-        colors = CardDefaults.cardColors(
+        colors = CardDefaults.outlinedCardColors(
             containerColor = if (isSelected) selectedBg else unselectedBg
         ),
         border = if (isSelected) BorderStroke(1.dp, accentColor) else BorderStroke(1.dp, unselectedBorder),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 0.dp else 1.dp)
+        shape = RoundedCornerShape(16.dp)
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(8.dp),
@@ -611,12 +609,12 @@ fun Step3Details(
     onHasEndDateChange: (Boolean) -> Unit,
     onPaymentMethodChange: (String) -> Unit
 ) {
-    val isDark = isSystemInDarkTheme()
-    val headerCardBg = if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f) else Color(0xFFF8F9FE)
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val headerCardBg = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF8F9FE)
     val iconSurfaceBg = if (isDark) MaterialTheme.colorScheme.primaryContainer else Color(0xFFE8EAF6)
     val accentColor = if (isDark) MaterialTheme.colorScheme.primary else Color(0xFF3F51B5)
     val subTextColor = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
-    val infoCardBg = if (isDark) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f) else Color(0xFFF0F4FF)
+    val infoCardBg = if (isDark) MaterialTheme.colorScheme.secondaryContainer else Color(0xFFF0F4FF)
 
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
@@ -1043,7 +1041,7 @@ fun Step4Review(
 
 @Composable
 fun ReviewRow(icon: ImageVector, label: String, value: String, subValue: String? = null) {
-    val isDark = isSystemInDarkTheme()
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -1073,6 +1071,10 @@ fun ReviewRow(icon: ImageVector, label: String, value: String, subValue: String?
 fun CurrencyDropdown(selectedCurrency: String, onCurrencyChange: (String) -> Unit, modifier: Modifier = Modifier) {
     val commonCurrencies = listOf("USD", "EUR", "GBP", "JPY", "INR", "CAD", "AUD", "BRL")
     var expanded by remember { mutableStateOf(false) }
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val accentColor = if (isDark) MaterialTheme.colorScheme.primary else Color(0xFF3F51B5)
+    val borderColor = if (isDark) MaterialTheme.colorScheme.outline else Color(0xFFE0E0E0)
+
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }, modifier = modifier) {
         OutlinedTextField(
             value = selectedCurrency,
@@ -1082,8 +1084,8 @@ fun CurrencyDropdown(selectedCurrency: String, onCurrencyChange: (String) -> Uni
             modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFF3F51B5),
-                unfocusedBorderColor = Color(0xFFE0E0E0)
+                focusedBorderColor = accentColor,
+                unfocusedBorderColor = borderColor
             )
         )
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
