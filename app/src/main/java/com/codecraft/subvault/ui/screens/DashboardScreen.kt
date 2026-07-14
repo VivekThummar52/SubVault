@@ -4,7 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -33,6 +33,16 @@ import androidx.compose.material3.LocalContentColor
 import java.text.SimpleDateFormat
 import java.util.*
 
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel = hiltViewModel(),
@@ -47,6 +57,38 @@ fun DashboardScreen(
     val selectedStatus by viewModel.selectedStatus.collectAsState()
     val categories by viewModel.categories.collectAsState()
 
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val scope = rememberCoroutineScope()
+    val titleFocusRequester = remember { FocusRequester() }
+
+    // Robust focus/keyboard clearing for all Android versions
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                // Clear immediately
+                focusManager.clearFocus()
+                keyboardController?.hide()
+                
+                // Also clear with a slight delay and steal focus to title
+                scope.launch {
+                    delay(300) // Slightly longer for very slow devices
+                    try {
+                        titleFocusRequester.requestFocus()
+                    } catch (_: Exception) {
+                        focusManager.clearFocus()
+                    }
+                    keyboardController?.hide()
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     var selectedSubscriptionForDetail by remember { mutableStateOf<Subscription?>(null) }
 
     DashboardContent(
@@ -57,6 +99,7 @@ fun DashboardScreen(
         selectedCategory = selectedCategory,
         selectedStatus = selectedStatus,
         categories = categories,
+        titleFocusRequester = titleFocusRequester,
         onSearchQueryChange = viewModel::onSearchQueryChange,
         onCategorySelect = viewModel::onCategorySelect,
         onStatusSelect = viewModel::onStatusSelect,
@@ -86,6 +129,7 @@ fun DashboardContent(
     selectedCategory: String,
     selectedStatus: String,
     categories: List<String>,
+    titleFocusRequester: FocusRequester,
     onSearchQueryChange: (String) -> Unit,
     onCategorySelect: (String) -> Unit,
     onStatusSelect: (String) -> Unit,
@@ -107,7 +151,10 @@ fun DashboardContent(
             Text(
                 text = "Dashboard",
                 style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .focusRequester(titleFocusRequester)
+                    .focusable()
             )
         }
 
@@ -342,6 +389,7 @@ fun DashboardPreview() {
             selectedCategory = "All",
             selectedStatus = "All",
             categories = listOf("All", "Entertainment", "Food"),
+            titleFocusRequester = remember { FocusRequester() },
             onSearchQueryChange = {},
             onCategorySelect = {},
             onStatusSelect = {},
