@@ -1,6 +1,7 @@
 package com.codecraft.subvault.ui.components
 
-import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
@@ -23,54 +24,49 @@ import java.util.*
 fun DonutChart(
     data: List<CategoryData>,
     modifier: Modifier = Modifier,
-    thickness: Dp = 16.dp,
+    thickness: Dp = 20.dp,
     currency: String = "USD"
 ) {
     val totalAmount = data.sumOf { it.totalAmount }
     val symbol = CurrencyUtils.getSymbol(currency)
-    
-    var hasAnimated by rememberSaveable(data.hashCode()) { mutableStateOf(false) }
-    val animationProgress = remember { Animatable(if (hasAnimated) 1f else 0f) }
 
-    LaunchedEffect(data) {
-        if (!hasAnimated) {
-            animationProgress.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(durationMillis = 1000)
-            )
-            hasAnimated = true
-        }
-    }
+    val animationProgress by animateFloatAsState(
+        targetValue = 1f,
+        animationSpec = tween(durationMillis = 1000, easing = FastOutSlowInEasing),
+        label = "donut_animation"
+    )
 
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Canvas(
             modifier = Modifier
-                .size(200.dp)
+                .size(220.dp)
                 .padding(thickness / 2)
         ) {
             var startAngle = -90f
             data.forEach { category ->
-                val sweepAngle = category.percentage * 360f * animationProgress.value
-                drawArc(
-                    color = category.color,
-                    startAngle = startAngle,
-                    sweepAngle = sweepAngle,
-                    useCenter = false,
-                    style = Stroke(width = thickness.toPx(), cap = StrokeCap.Round)
-                )
-                startAngle += sweepAngle
+                val sweepAngle = category.percentage * 360f * animationProgress
+                if (sweepAngle > 0.5f) { // Only draw if visible
+                    drawArc(
+                        color = category.color,
+                        startAngle = startAngle,
+                        sweepAngle = sweepAngle,
+                        useCenter = false,
+                        style = Stroke(width = thickness.toPx(), cap = StrokeCap.Round)
+                    )
+                }
+                startAngle += category.percentage * 360f * animationProgress
             }
         }
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = "Total",
+                text = "Total Spending",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
                 text = symbol + String.format(Locale.getDefault(), "%.2f", totalAmount),
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
         }
