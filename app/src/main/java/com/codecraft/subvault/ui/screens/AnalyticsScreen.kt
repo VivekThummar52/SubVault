@@ -1,29 +1,41 @@
 package com.codecraft.subvault.ui.screens
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
+import com.codecraft.subvault.domain.model.Subscription
 import com.codecraft.subvault.domain.util.CurrencyUtils
 import com.codecraft.subvault.ui.components.DonutChart
 import com.codecraft.subvault.ui.theme.SubVaultTheme
-import com.codecraft.subvault.ui.viewmodel.AnalyticsState
-import com.codecraft.subvault.ui.viewmodel.AnalyticsViewModel
-import com.codecraft.subvault.ui.viewmodel.CategoryData
+import com.codecraft.subvault.ui.viewmodel.*
 import java.util.*
+
+import kotlin.math.roundToInt
 
 @Composable
 fun AnalyticsScreen(
@@ -55,12 +67,14 @@ fun AnalyticsContent(
     onYearSelected: (Int) -> Unit,
     onTrendRangeSelected: (Int) -> Unit
 ) {
+    var expandedCategory by remember { mutableStateOf<String?>(null) }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),
         contentPadding = PaddingValues(top = 16.dp, bottom = 40.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
             Text(
@@ -73,7 +87,7 @@ fun AnalyticsContent(
         // Period Selectors
         item {
             Row(
-                modifier = Modifier.fillMaxWidth(), 
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -128,11 +142,11 @@ fun AnalyticsContent(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Spending Trend", 
-                            style = MaterialTheme.typography.titleMedium, 
+                            text = "Spending Trend",
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
-                        
+
                         SingleChoiceSegmentedButtonRow {
                             SegmentedButton(
                                 selected = trendRange == 6,
@@ -177,7 +191,15 @@ fun AnalyticsContent(
             }
 
             items(uiState.categoryData) { data ->
-                CategoryRow(data, uiState.defaultCurrency)
+                CategoryRow(
+                    data = data,
+                    currency = uiState.defaultCurrency,
+                    isExpanded = expandedCategory == data.category,
+                    isYearly = uiState.isYearlyView,
+                    onClick = {
+                        expandedCategory = if (expandedCategory == data.category) null else data.category
+                    }
+                )
             }
         }
     }
@@ -232,20 +254,117 @@ fun InsightCard(text: String) {
 }
 
 @Composable
-fun CategoryRow(data: CategoryData, currency: String) {
+fun CategoryRow(
+    data: CategoryData,
+    currency: String,
+    isExpanded: Boolean,
+    isYearly: Boolean,
+    onClick: () -> Unit
+) {
     val symbol = CurrencyUtils.getSymbol(currency)
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Box(modifier = Modifier.size(12.dp).background(data.color, CircleShape))
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(text = data.category, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-        Column(horizontalAlignment = Alignment.End) {
-            Text(
-                text = symbol + String.format(Locale.getDefault(), "%.2f", data.totalAmount),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold
-            )
-            Text(text = "${(data.percentage * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
+    val rotation by animateFloatAsState(targetValue = if (isExpanded) 90f else 0f, label = "rotation")
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            ),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isExpanded)
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            else
+                Color.Transparent
+        )
+    ) {
+        Column(modifier = Modifier.padding(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(modifier = Modifier.size(12.dp).background(data.color, CircleShape))
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = data.category,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = if (isExpanded) FontWeight.Bold else FontWeight.Normal
+                )
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = symbol + String.format(Locale.getDefault(), "%.2f", data.totalAmount),
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "${data.displayPercentage}%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .rotate(rotation),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(start = 24.dp, top = 8.dp, end = 8.dp)
+                ) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(bottom = 8.dp),
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                    data.subscriptions.forEach { subscription ->
+                        SubscriptionItemRow(subscription, symbol)
+                    }
+                }
+            }
         }
+    }
+}
+
+@Composable
+fun SubscriptionItemRow(subscription: SubscriptionAnalyticsData, symbol: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AsyncImage(
+            model = subscription.iconUrl.ifEmpty { "https://ui-avatars.com/api/?name=${subscription.name}&background=random" },
+            contentDescription = null,
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape),
+            contentScale = ContentScale.Crop
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = subscription.name,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = symbol + String.format(Locale.getDefault(), "%.2f", subscription.amount),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
 
@@ -300,8 +419,8 @@ fun AnalyticsPreview() {
         AnalyticsContent(
             uiState = AnalyticsState(
                 categoryData = listOf(
-                    CategoryData("Entertainment", 100.0, 0.6f, Color.Blue),
-                    CategoryData("Food", 66.66, 0.4f, Color.Green)
+                    CategoryData("Entertainment", 100.0, 0.6f, 60, Color.Blue),
+                    CategoryData("Food", 66.66, 0.4f, 40, Color.Green)
                 ),
                 totalSpending = 166.66,
                 insights = listOf("You spend most on Entertainment."),

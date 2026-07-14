@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.codecraft.subvault.data.local.ExchangeRateDao
 import com.codecraft.subvault.data.local.PriceChangeDao
+import com.codecraft.subvault.data.local.SentNotificationDao
 import com.codecraft.subvault.data.local.SubVaultDatabase
 import com.codecraft.subvault.data.local.SubscriptionDao
 import com.codecraft.subvault.data.local.UserPreferencesDao
@@ -28,7 +29,12 @@ object AppModule {
             SubVaultDatabase::class.java,
             "subvault_db"
         )
-        .addMigrations(SubVaultDatabase.MIGRATION_2_3, SubVaultDatabase.MIGRATION_3_4, SubVaultDatabase.MIGRATION_4_5)
+        .addMigrations(
+            SubVaultDatabase.MIGRATION_2_3, 
+            SubVaultDatabase.MIGRATION_3_4, 
+            SubVaultDatabase.MIGRATION_4_5,
+            SubVaultDatabase.MIGRATION_5_6
+        )
         .build()
     }
 
@@ -54,6 +60,12 @@ object AppModule {
     @Singleton
     fun provideExchangeRateDao(database: SubVaultDatabase): ExchangeRateDao {
         return database.exchangeRateDao
+    }
+
+    @Provides
+    @Singleton
+    fun provideSentNotificationDao(database: SubVaultDatabase): SentNotificationDao {
+        return database.sentNotificationDao
     }
 
     @Provides

@@ -7,12 +7,13 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.codecraft.subvault.domain.model.ExchangeRate
 import com.codecraft.subvault.domain.model.PriceChangeLog
+import com.codecraft.subvault.domain.model.SentNotification
 import com.codecraft.subvault.domain.model.Subscription
 import com.codecraft.subvault.domain.model.UserPreferences
 
 @Database(
-    entities = [Subscription::class, PriceChangeLog::class, UserPreferences::class, ExchangeRate::class],
-    version = 5,
+    entities = [Subscription::class, PriceChangeLog::class, UserPreferences::class, ExchangeRate::class, SentNotification::class],
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -21,8 +22,22 @@ abstract class SubVaultDatabase : RoomDatabase() {
     abstract val userPreferencesDao: UserPreferencesDao
     abstract val priceChangeDao: PriceChangeDao
     abstract val exchangeRateDao: ExchangeRateDao
+    abstract val sentNotificationDao: SentNotificationDao
 
     companion object {
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS sent_notifications (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        subscriptionId INTEGER NOT NULL,
+                        renewalDate INTEGER NOT NULL,
+                        intervalDays INTEGER NOT NULL,
+                        sentAt INTEGER NOT NULL
+                    )
+                """.trimIndent())
+            }
+        }
         val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("""
