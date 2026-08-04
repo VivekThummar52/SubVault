@@ -32,4 +32,23 @@ object DateUtils {
         return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
                cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
     }
+
+    /**
+     * Calculates the very first renewal date that occurs after the start date.
+     */
+    fun getFirstRenewalDate(renewalDate: Long, cycle: String): Long {
+        if (cycle.lowercase() == "lifetime") return Long.MAX_VALUE
+        
+        val calendar = Calendar.getInstance()
+        calendar.timeInMillis = renewalDate
+        
+        when (cycle.lowercase()) {
+            "weekly" -> calendar.add(Calendar.WEEK_OF_YEAR, 1)
+            "monthly" -> calendar.add(Calendar.MONTH, 1)
+            "yearly" -> calendar.add(Calendar.YEAR, 1)
+            else -> calendar.add(Calendar.MONTH, 1)
+        }
+        
+        return calendar.timeInMillis
+    }
 }
