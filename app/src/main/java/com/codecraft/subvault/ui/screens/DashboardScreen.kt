@@ -1,8 +1,16 @@
 package com.codecraft.subvault.ui.screens
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,6 +33,16 @@ import androidx.compose.material3.LocalContentColor
 import java.text.SimpleDateFormat
 import java.util.*
 
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel = hiltViewModel(),
@@ -34,6 +52,42 @@ fun DashboardScreen(
     val summary by viewModel.dashboardSummary.collectAsState()
     val subscriptions by viewModel.subscriptions.collectAsState()
     val defaultCurrency by viewModel.defaultCurrency.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val selectedCategory by viewModel.selectedCategory.collectAsState()
+    val selectedStatus by viewModel.selectedStatus.collectAsState()
+    val categories by viewModel.categories.collectAsState()
+
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val scope = rememberCoroutineScope()
+    val titleFocusRequester = remember { FocusRequester() }
+
+    // Robust focus/keyboard clearing for all Android versions
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                // Clear immediately
+                focusManager.clearFocus()
+                keyboardController?.hide()
+                
+                // Also clear with a slight delay and steal focus to title
+                scope.launch {
+                    delay(300) // Slightly longer for very slow devices
+                    try {
+                        titleFocusRequester.requestFocus()
+                    } catch (_: Exception) {
+                        focusManager.clearFocus()
+                    }
+                    keyboardController?.hide()
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     var selectedSubscriptionForDetail by remember { mutableStateOf<Subscription?>(null) }
 
@@ -41,7 +95,16 @@ fun DashboardScreen(
         summary = summary,
         subscriptions = subscriptions,
         defaultCurrency = defaultCurrency,
+        searchQuery = searchQuery,
+        selectedCategory = selectedCategory,
+        selectedStatus = selectedStatus,
+        categories = categories,
+        titleFocusRequester = titleFocusRequester,
+        onSearchQueryChange = viewModel::onSearchQueryChange,
+        onCategorySelect = viewModel::onCategorySelect,
+        onStatusSelect = viewModel::onStatusSelect,
         onSubscriptionClick = { id -> 
+            onSubscriptionClick(id) // Use the parameter if provided
             selectedSubscriptionForDetail = subscriptions.find { it.id == id }
         },
         onEditSubscription = onEditSubscription,
@@ -62,6 +125,14 @@ fun DashboardContent(
     summary: SpendingSummary?,
     subscriptions: List<Subscription>,
     defaultCurrency: String,
+    searchQuery: String,
+    selectedCategory: String,
+    selectedStatus: String,
+    categories: List<String>,
+    titleFocusRequester: FocusRequester,
+    onSearchQueryChange: (String) -> Unit,
+    onCategorySelect: (String) -> Unit,
+    onStatusSelect: (String) -> Unit,
     onSubscriptionClick: (Long) -> Unit,
     onEditSubscription: (Long) -> Unit,
     onDeleteSubscription: (Subscription) -> Unit
@@ -73,35 +144,116 @@ fun DashboardContent(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(top = 16.dp, bottom = 40.dp), // Definitively avoid bottom nav overlap
+        contentPadding = PaddingValues(top = 16.dp, bottom = 40.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
             Text(
                 text = "Dashboard",
                 style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .focusRequester(titleFocusRequester)
+                    .focusable()
             )
         }
 
         item {
-            SummaryCard(
-                totalMonthlySpend = summary?.totalMonthlySpend ?: 0.0,
-                subscriptionCount = summary?.activeCount ?: 0,
-                currency = defaultCurrency
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                placeholder = { Text("Search subscriptions...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { onSearchQueryChange("") }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear search")
+                        }
+                    }
+                },
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                )
             )
         }
 
-        if (summary?.upcomingRenewals?.isNotEmpty() == true) {
-            item {
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "Upcoming (Next 7 Days)",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold
+                    text = "Status",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 8.dp)
+                ) {
+                    val statuses = listOf("All", "Active", "Expired")
+                    items(statuses) { status ->
+                        FilterChip(
+                            selected = selectedStatus == status,
+                            onClick = { onStatusSelect(status) },
+                            label = { Text(status) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        )
+                    }
+                }
+                
+                Text(
+                    text = "Category",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 8.dp)
+                ) {
+                    items(categories) { category ->
+                        FilterChip(
+                            selected = selectedCategory == category,
+                            onClick = { onCategorySelect(category) },
+                            label = { Text(category) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
+        if (searchQuery.isEmpty() && selectedCategory == "All" && selectedStatus == "All") {
+            item {
+                SummaryCard(
+                    totalMonthlySpend = summary?.totalMonthlySpend ?: 0.0,
+                    subscriptionCount = summary?.activeCount ?: 0,
+                    currency = defaultCurrency
                 )
             }
-            items(summary.upcomingRenewals) { renewal ->
-                UpcomingRenewalItem(renewal)
+
+            if (summary?.upcomingRenewals?.isNotEmpty() == true) {
+                item {
+                    Text(
+                        text = "Upcoming (Next 7 Days)",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                items(summary.upcomingRenewals) { renewal ->
+                    UpcomingRenewalItem(renewal)
+                }
             }
         }
 
@@ -111,9 +263,11 @@ fun DashboardContent(
         if (activeSubscriptions.isNotEmpty()) {
             item {
                 Text(
-                    text = "Active Subscriptions",
+                    text = if (searchQuery.isEmpty() && selectedCategory == "All" && selectedStatus == "All") 
+                        "Active Subscriptions" 
+                    else "Results",
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.Bold
                 )
             }
 
@@ -134,9 +288,11 @@ fun DashboardContent(
             item {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Expired / Inactive",
+                    text = if (searchQuery.isEmpty() && selectedCategory == "All" && selectedStatus == "All") 
+                        "Expired / Inactive" 
+                    else "Inactive Results",
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
             }
@@ -158,10 +314,14 @@ fun DashboardContent(
 
         if (subscriptions.isEmpty()) {
             item {
-                Text(
-                    text = "No subscriptions added yet. Tap + to start tracking!",
-                    modifier = Modifier.padding(vertical = 32.dp)
-                )
+                Box(modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = if (searchQuery.isEmpty()) 
+                            "No subscriptions added yet. Tap + to start tracking!" 
+                        else 
+                            "No subscriptions match your search."
+                    )
+                }
             }
         }
     }
@@ -225,6 +385,14 @@ fun DashboardPreview() {
                 Subscription(2, "Domino's", "Food", 25.0, "USD", "Weekly", System.currentTimeMillis(), paymentMethod = "UPI")
             ),
             defaultCurrency = "USD",
+            searchQuery = "",
+            selectedCategory = "All",
+            selectedStatus = "All",
+            categories = listOf("All", "Entertainment", "Food"),
+            titleFocusRequester = remember { FocusRequester() },
+            onSearchQueryChange = {},
+            onCategorySelect = {},
+            onStatusSelect = {},
             onSubscriptionClick = {},
             onEditSubscription = {},
             onDeleteSubscription = {}

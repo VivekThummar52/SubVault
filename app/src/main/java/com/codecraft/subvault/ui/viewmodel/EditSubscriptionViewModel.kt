@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.codecraft.subvault.domain.model.PriceChangeLog
 import com.codecraft.subvault.domain.model.Subscription
+import com.codecraft.subvault.domain.repository.PreferenceRepository
 import com.codecraft.subvault.domain.repository.SubscriptionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -14,6 +15,7 @@ import javax.inject.Inject
 @HiltViewModel
 class EditSubscriptionViewModel @Inject constructor(
     private val repository: SubscriptionRepository,
+    private val preferenceRepository: PreferenceRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -24,6 +26,10 @@ class EditSubscriptionViewModel @Inject constructor(
 
     val priceHistory: StateFlow<List<PriceChangeLog>> = repository.getPriceHistory(subscriptionId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val defaultCurrency: StateFlow<String> = preferenceRepository.getUserPreferences()
+        .map { it.defaultCurrency }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "USD")
 
     init {
         loadSubscription()

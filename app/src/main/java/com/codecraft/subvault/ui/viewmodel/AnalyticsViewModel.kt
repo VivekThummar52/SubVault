@@ -12,6 +12,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import javax.inject.Inject
 import java.util.*
+import kotlin.math.roundToInt
 
 @Immutable
 data class AnalyticsState(
@@ -30,7 +31,16 @@ data class CategoryData(
     val category: String,
     val totalAmount: Double,
     val percentage: Float,
-    val color: Color
+    val displayPercentage: Int,
+    val color: Color,
+    val subscriptions: List<SubscriptionAnalyticsData> = emptyList()
+)
+
+@Immutable
+data class SubscriptionAnalyticsData(
+    val name: String,
+    val amount: Double,
+    val iconUrl: String
 )
 
 @HiltViewModel
@@ -79,7 +89,7 @@ class AnalyticsViewModel @Inject constructor(
             currencyConverter.convert(amount, sub.currency, defaultCurrency)
         }
 
-        val categories = filteredSubscriptions.groupBy { it.category }.toList()
+        val initialCategories = filteredSubscriptions.groupBy { it.category }.toList()
             .mapIndexed { index, (category, subs) ->
                 val categoryTotal = subs.sumOf { sub ->
                     val amount = if (isYearly) {
@@ -93,9 +103,40 @@ class AnalyticsViewModel @Inject constructor(
                     category = category,
                     totalAmount = categoryTotal,
                     percentage = if (total > 0) (categoryTotal / total).toFloat() else 0f,
-                    color = categoryColors[index % categoryColors.size]
+                    displayPercentage = 0, // Will be calculated below
+                    color = categoryColors[index % categoryColors.size],
+                    subscriptions = subs.map { sub ->
+                        val subAmount = if (isYearly) {
+                            calculateYearlyPriceForPeriod(sub, year)
+                        } else {
+                            calculateMonthlyPriceForPeriod(sub, month, year)
+                        }
+                        SubscriptionAnalyticsData(
+                            name = sub.name,
+                            amount = currencyConverter.convert(subAmount, sub.currency, defaultCurrency),
+                            iconUrl = sub.iconUrl
+                        )
+                    }.sortedByDescending { it.amount }
                 )
             }.sortedByDescending { it.totalAmount }
+
+        // Adjust display percentages to ensure they sum to exactly 100
+        val categories = if (initialCategories.isNotEmpty()) {
+            val rounded = initialCategories.map { (it.percentage * 100).roundToInt() }
+            val sum = rounded.sum()
+            if (sum == 100) {
+                initialCategories.mapIndexed { i, cat -> cat.copy(displayPercentage = rounded[i]) }
+            } else {
+                // Adjust the largest category to make the sum 100
+                val diff = 100 - sum
+                initialCategories.mapIndexed { i, cat ->
+                    if (i == 0) cat.copy(displayPercentage = rounded[i] + diff)
+                    else cat.copy(displayPercentage = rounded[i])
+                }
+            }
+        } else {
+            initialCategories
+        }
 
         // Calculate trend points
         val trend = calculateTrend(subscriptions, defaultCurrency, range)

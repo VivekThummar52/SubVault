@@ -1,5 +1,6 @@
 package com.codecraft.subvault.data.repository
 
+import com.codecraft.subvault.data.local.ExchangeRateDao
 import com.codecraft.subvault.data.local.PriceChangeDao
 import com.codecraft.subvault.data.local.SubscriptionDao
 import com.codecraft.subvault.domain.model.PriceChangeLog
@@ -19,6 +20,7 @@ import javax.inject.Inject
 class SubscriptionRepositoryImpl @Inject constructor(
     private val dao: SubscriptionDao,
     private val priceChangeDao: PriceChangeDao,
+    private val exchangeRateDao: ExchangeRateDao,
     private val preferenceRepository: PreferenceRepository,
     private val currencyConverter: CurrencyConverter
 ) : SubscriptionRepository {
@@ -32,8 +34,9 @@ class SubscriptionRepositoryImpl @Inject constructor(
     override fun getDashboardSummary(): Flow<SpendingSummary> {
         return combine(
             getActiveSubscriptions(),
-            preferenceRepository.getUserPreferences()
-        ) { subscriptions, prefs ->
+            preferenceRepository.getUserPreferences(),
+            exchangeRateDao.getRatesFlow()
+        ) { subscriptions, prefs, rates ->
             val defaultCurrency = prefs.defaultCurrency
             val now = System.currentTimeMillis()
             val sevenDaysFromNow = now + (7 * 24 * 60 * 60 * 1000)
@@ -63,7 +66,8 @@ class SubscriptionRepositoryImpl @Inject constructor(
             SpendingSummary(
                 totalMonthlySpend = totalMonthlySpend,
                 activeCount = subscriptions.size,
-                upcomingRenewals = upcoming
+                upcomingRenewals = upcoming,
+                lastRatesUpdate = rates.maxOfOrNull { it.updatedAt }
             )
         }
     }
@@ -73,7 +77,11 @@ class SubscriptionRepositoryImpl @Inject constructor(
 
     override suspend fun getSubscriptionById(id: Long): Subscription? = dao.getSubscriptionById(id)
 
-    override suspend fun insertSubscription(subscription: Subscription) = dao.insertSubscription(subscription)
+    override suspend fun insertSubscription(subscription: Subscription) {
+        val now = System.currentTimeMillis()
+        val shouldBeActive = subscription.endDate == null || subscription.endDate >= now
+        dao.insertSubscription(subscription.copy(isActive = shouldBeActive))
+    }
 
     override suspend fun updateSubscription(subscription: Subscription) {
         val oldSubscription = dao.getSubscriptionById(subscription.id)
@@ -88,16 +96,9 @@ class SubscriptionRepositoryImpl @Inject constructor(
             )
         }
         
-        // Auto-reactivate if it was inactive but now has a future end date or no end date
         val now = System.currentTimeMillis()
         val shouldBeActive = subscription.endDate == null || subscription.endDate >= now
-        val updatedSubscription = if (!subscription.isActive && shouldBeActive) {
-            subscription.copy(isActive = true)
-        } else {
-            subscription
-        }
-        
-        dao.updateSubscription(updatedSubscription)
+        dao.updateSubscription(subscription.copy(isActive = shouldBeActive))
     }
 
     override suspend fun deleteSubscription(subscription: Subscription) = dao.deleteSubscription(subscription)
