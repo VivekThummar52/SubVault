@@ -17,7 +17,8 @@ object DateUtils {
         // If start date is in the future, that's the next renewal
         if (calendar.after(now)) return renewalDate
         
-        while (calendar.before(now) || isSameDay(calendar, now)) {
+        while (calendar.before(now)) {
+            if (isSameDay(calendar, now)) break
             when (cycle.lowercase()) {
                 "weekly" -> calendar.add(Calendar.WEEK_OF_YEAR, 1)
                 "monthly" -> calendar.add(Calendar.MONTH, 1)
