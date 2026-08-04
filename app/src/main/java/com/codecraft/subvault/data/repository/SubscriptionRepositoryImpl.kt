@@ -77,7 +77,11 @@ class SubscriptionRepositoryImpl @Inject constructor(
 
     override suspend fun getSubscriptionById(id: Long): Subscription? = dao.getSubscriptionById(id)
 
-    override suspend fun insertSubscription(subscription: Subscription) = dao.insertSubscription(subscription)
+    override suspend fun insertSubscription(subscription: Subscription) {
+        val now = System.currentTimeMillis()
+        val shouldBeActive = subscription.endDate == null || subscription.endDate >= now
+        dao.insertSubscription(subscription.copy(isActive = shouldBeActive))
+    }
 
     override suspend fun updateSubscription(subscription: Subscription) {
         val oldSubscription = dao.getSubscriptionById(subscription.id)
@@ -92,16 +96,9 @@ class SubscriptionRepositoryImpl @Inject constructor(
             )
         }
         
-        // Auto-reactivate if it was inactive but now has a future end date or no end date
         val now = System.currentTimeMillis()
         val shouldBeActive = subscription.endDate == null || subscription.endDate >= now
-        val updatedSubscription = if (!subscription.isActive && shouldBeActive) {
-            subscription.copy(isActive = true)
-        } else {
-            subscription
-        }
-        
-        dao.updateSubscription(updatedSubscription)
+        dao.updateSubscription(subscription.copy(isActive = shouldBeActive))
     }
 
     override suspend fun deleteSubscription(subscription: Subscription) = dao.deleteSubscription(subscription)
